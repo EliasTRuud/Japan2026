@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Japan Packing Checklist</title>
+  <style>
+    :root {
+      --ink: #17231e;
+      --muted: #6b756f;
+      --paper: #f4f0e7;
+      --card: #fffdf8;
+      --green: #176b4b;
+      --red: #c74f3b;
+      --line: #d8ddd7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 13px/1.25 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    main { width: min(1400px, calc(100% - 20px)); margin: 0 auto; padding: 14px 0 32px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    h1 { margin: 0; font-size: clamp(22px, 4vw, 34px); }
+    .summary { color: var(--muted); font-weight: 700; }
+    .progress { height: 7px; margin-bottom: 10px; overflow: hidden; border-radius: 99px; background: #dfe4df; }
+    .progress-fill { height: 100%; width: 0; background: var(--green); transition: width .2s; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(150px, 1fr) auto auto;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    input {
+      min-height: 34px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: white;
+    }
+    .btn {
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: white;
+      font-weight: 700;
+    }
+    .btn:hover { border-color: var(--green); }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; align-items: start; }
+    .category {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--card);
+    }
+    .category h2 {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0;
+      padding: 7px 9px;
+      border-bottom: 1px solid var(--line);
+      color: var(--green);
+      background: #edf4ef;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .category-count { color: var(--muted); font-size: 11px; }
+    .item {
+      display: grid;
+      grid-template-columns: 25px 25px minmax(0, 1fr);
+      align-items: center;
+      min-height: 31px;
+      border-bottom: 1px solid #eceeea;
+    }
+    .item:last-child { border-bottom: 0; }
+    .state {
+      display: grid;
+      width: 21px;
+      height: 21px;
+      margin-left: 4px;
+      place-items: center;
+      border: 1px solid #bbc4be;
+      border-radius: 5px;
+      color: transparent;
+      background: white;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .state:hover { border-color: var(--green); }
+    .item.packed .pack { border-color: var(--green); color: white; background: var(--green); }
+    .item.skipped .skip { border-color: var(--red); color: white; background: var(--red); }
+    .item.packed .skip, .item.skipped .pack { opacity: .3; }
+    .name {
+      padding: 6px 7px;
+      overflow-wrap: anywhere;
+    }
+    .item.skipped .name { color: var(--muted); text-decoration: line-through; }
+    .tag {
+      display: inline-block;
+      margin-left: 5px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      color: #9a6400;
+      background: #fff0c8;
+      font-size: 9px;
+      font-weight: 800;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .tag.buy { color: #a34431; background: #ffe7df; }
+    .add {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 7px;
+      margin-top: 10px;
+    }
+    .foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .legend { display: flex; gap: 12px; }
+    .legend b { color: var(--ink); }
+    .empty { padding: 25px; color: var(--muted); text-align: center; }
+    @media (max-width: 720px) {
+      main { width: min(100% - 12px, 1400px); padding-top: 8px; }
+      header { align-items: start; flex-direction: column; }
+      .grid { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr auto; }
+      .toolbar input { grid-column: 1 / -1; }
+      .foot { align-items: start; flex-direction: column; }
+    }
+    @media print {
+      body { background: white; font-size: 10px; }
+      main { width: 100%; padding: 0; }
+      .toolbar, .add, .foot { display: none; }
+      .grid { gap: 5px; }
+      .category { break-inside: avoid; }
+      .item { min-height: 23px; }
+      .state { width: 16px; height: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Japan Packing Checklist</h1>
+      <div class="summary" id="summary">0 packed · 0 not needed · 0 left</div>
+    </header>
+    <div class="progress"><div class="progress-fill" id="progress"></div></div>
+
+    <section class="toolbar">
+      <input id="search" type="search" placeholder="Search list...">
+      <button class="btn" id="show-left">Show left</button>
+      <button class="btn" id="show-all">Show all</button>
+    </section>
+
+    <section class="grid" id="grid"></section>
+
+    <section class="add">
+      <input id="new-item" placeholder="Add another item...">
+      <button class="btn" id="add-item">Add</button>
+    </section>
+
+    <footer class="foot">
+      <div class="legend"><span><b>✓</b> packed/ready</span><span><b>×</b> not needed</span><span>Click again to undo</span></div>
+      <span id="save-state">Saved automatically in this browser.</span>
+    </footer>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "japan-2026-packing-compact-v1";
+    const OLD_STORAGE_KEY = "japan-2026-packing-checklist-v1";
+    const sections = [
+      ["Wear Travelling", [
+        ["Sweatpants", "wear"], ["Hoodie", "wear"], ["T-shirt", "wear"],
+        ["Underwear and socks", "wear"], ["Trail runners / walking shoes", "wear"],
+        ["Phone", "wear"], ["Passport", "wear"], ["Wallet", "wear"]
+      ]],
+      ["Bags & Organization", [
+        ["Lowe Alpine Attack MX 50+10 backpack"], ["Small mini backpack"],
+        ["PC bag for MacBook and charger"], ["Waterproof backpack liner / sturdy bin bag"],
+        ["Backpack rain cover"], ["2-3 packing cubes"], ["Laundry bag"],
+        ["Reusable shopping bag"], ["A few zip-lock bags"], ["AirTag / tracker"],
+        ["Small luggage lock"], ["Inspect backpack seams, straps and buckles"]
+      ]],
+      ["Clothing", [
+        ["5 lightweight quick-drying T-shirts"], ["Breathable long-sleeve shirt"],
+        ["Waterproof rain jacket"], ["Lightweight waterproof trousers"],
+        ["Lightweight travel trousers"], ["2 pairs shorts"], ["Swimsuit"],
+        ["Lightweight sleepwear"], ["5-6 pairs underwear"], ["3 pairs everyday socks"],
+        ["2 pairs hiking socks"], ["Cap / sun hat"]
+      ]],
+      ["Footwear & Outdoor", [
+        ["Lightweight sandals / flip-flops"], ["Lightweight water bottle", "buy"],
+        ["Optional collapsible hiking bottle"], ["Small quick-dry towel"], ["Sunglasses"],
+        ["Headlamp"], ["Blister patches and plasters"], ["Waterproof phone pouch"],
+        ["Mini umbrella if needed", "buy"], ["Swim goggles if wanted"]
+      ]],
+      ["Toiletries & Health", [
+        ["Toothbrush and toothpaste"], ["Deodorant"], ["Small shampoo / body wash if needed"],
+        ["Minimal grooming items"], ["Sunscreen"], ["Insect repellent"],
+        ["Anti-chafing balm"], ["Personal medication"], ["Painkillers / antihistamines / stomach medicine"],
+        ["Hand sanitizer and tissues"], ["Earplugs and sleep mask"], ["A few detergent sheets"],
+        ["Nail clippers"], ["Spare glasses / contact lenses if needed"],
+        ["Prescription / medication documents if needed"]
+      ]],
+      ["Electronics", [
+        ["MacBook"], ["MacBook charger"], ["Small power bank"], ["Phone charging cable"],
+        ["Earbuds"], ["Japan eSIM / roaming plan"], ["Japan Type-A adapter if required"]
+      ]],
+      ["Documents & Money", [
+        ["Two payment cards stored separately"], ["Some Japanese yen"], ["Travel insurance details"],
+        ["Flight and accommodation confirmations"], ["JR Pass information"],
+        ["Digital copies of important documents"], ["Emergency contact information"],
+        ["Coin pouch / wallet with coin space"], ["Pen"]
+      ]]
+    ];
+
+    const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const defaultItems = sections.flatMap(([section, items]) =>
+      items.map(([name, tag]) => ({id: slug(name), name, section, tag: tag || "", status: ""}))
+    );
+
+    function load() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && Array.isArray(saved.items)) {
+          const knownIds = new Set(saved.items.map(item => item.id));
+          defaultItems.forEach(item => {
+            if (!knownIds.has(item.id)) saved.items.push(item);
+          });
+          return saved;
+        }
+      } catch {}
+
+      const state = {items: defaultItems};
+      try {
+        const old = JSON.parse(localStorage.getItem(OLD_STORAGE_KEY));
+        if (old && Array.isArray(old.items)) {
+          const normalized = value => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+          state.items.forEach(item => {
+            const match = old.items.find(candidate =>
+              normalized(candidate.name).includes(normalized(item.name)) ||
+              normalized(item.name).includes(normalized(candidate.name))
+            );
+            if (match?.done) item.status = "packed";
+          });
+        }
+      } catch {}
+      return state;
+    }
+
+    let state = load();
+    let leftOnly = false;
+
+    function save(message = "Saved automatically in this browser.") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      document.getElementById("save-state").textContent = message;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      })[char]);
+    }
+
+    function render() {
+      const query = document.getElementById("search").value.trim().toLowerCase();
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+
+      sections.forEach(([section]) => {
+        const all = state.items.filter(item => item.section === section);
+        const visible = all.filter(item =>
+          (!leftOnly || !item.status) &&
+          (!query || item.name.toLowerCase().includes(query))
+        );
+        if (!visible.length) return;
+        const complete = all.filter(item => item.status).length;
+        const card = document.createElement("section");
+        card.className = "category";
+        card.innerHTML = `
+          <h2><span>${escapeHtml(section)}</span><span class="category-count">${complete}/${all.length}</span></h2>
+          <div>
+            ${visible.map(item => `
+              <div class="item ${item.status}" data-id="${escapeHtml(item.id)}">
+                <button class="state pack" data-status="packed" aria-label="Mark packed">✓</button>
+                <button class="state skip" data-status="skipped" aria-label="Mark not needed">×</button>
+                <span class="name">${escapeHtml(item.name)}${item.tag ? `<span class="tag ${item.tag}">${item.tag === "wear" ? "wear" : "buy there"}</span>` : ""}</span>
+              </div>
+            `).join("")}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      if (!grid.children.length) grid.innerHTML = '<div class="category empty">Nothing left in this view.</div>';
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const packed = state.items.filter(item => item.status === "packed").length;
+      const skipped = state.items.filter(item => item.status === "skipped").length;
+      const left = state.items.length - packed - skipped;
+      const complete = packed + skipped;
+      document.getElementById("summary").textContent = `${packed} packed · ${skipped} not needed · ${left} left`;
+      document.getElementById("progress").style.width = `${state.items.length ? complete / state.items.length * 100 : 0}%`;
+    }
+
+    document.getElementById("grid").addEventListener("click", event => {
+      const button = event.target.closest("[data-status]");
+      if (!button) return;
+      const item = state.items.find(candidate => candidate.id === button.closest(".item").dataset.id);
+      item.status = item.status === button.dataset.status ? "" : button.dataset.status;
+      save();
+      render();
+    });
+
+    document.getElementById("search").addEventListener("input", render);
+    document.getElementById("show-left").addEventListener("click", () => { leftOnly = true; render(); });
+    document.getElementById("show-all").addEventListener("click", () => { leftOnly = false; render(); });
+
+    function addItem() {
+      const input = document.getElementById("new-item");
+      const name = input.value.trim();
+      if (!name) return input.focus();
+      state.items.push({id: `custom-${Date.now()}`, name, section: "Bags & Organization", tag: "", status: ""});
+      input.value = "";
+      save(`${name} added.`);
+      render();
+    }
+    document.getElementById("add-item").addEventListener("click", addItem);
+    document.getElementById("new-item").addEventListener("keydown", event => { if (event.key === "Enter") addItem(); });
+
+    render();
+  </script>
+</body>
+</html>

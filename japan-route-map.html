@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Japan 2026 Route Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      --ink: #14231d;
+      --muted: #60736a;
+      --paper: #f5f1e8;
+      --card: rgba(255, 253, 247, 0.94);
+      --green: #176b4b;
+      --coral: #e46c4c;
+      --gold: #d9a441;
+      --line: #d7ddd5;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); font-family: "DM Sans", sans-serif; }
+    .layout { display: grid; grid-template-columns: minmax(340px, 410px) 1fr; height: 100vh; }
+    .panel { z-index: 500; overflow-y: auto; padding: 28px 24px 40px; background: var(--card); box-shadow: 5px 0 24px rgba(20,35,29,.12); }
+    h1 { margin: 0 0 4px; font: 700 34px/1.1 "Fraunces", serif; }
+    .subtitle { color: var(--muted); margin: 0 0 20px; }
+    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 22px; }
+    .stat { padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #fffdf8; text-align: center; }
+    .stat b { display: block; font-size: 18px; color: var(--green); }
+    .stat span { font-size: 11px; color: var(--muted); }
+    .note { margin: 0 0 20px; padding: 12px 14px; border-left: 4px solid var(--gold); border-radius: 8px; background: #fff7df; font-size: 13px; }
+    .sync-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: -8px 0 20px; }
+    .sync-actions a, .sync-actions button { display: grid; place-items: center; min-height: 42px; padding: 8px; border: 0; border-radius: 10px; background: var(--green); color: white; text-decoration: none; font: 700 12px "DM Sans", sans-serif; cursor: pointer; text-align: center; }
+    .sync-actions button { background: var(--coral); }
+    .sync-actions .packing-link { grid-column: 1 / -1; background: var(--gold); color: var(--ink); }
+    .sync-message { grid-column: 1 / -1; color: var(--muted); font-size: 11px; min-height: 15px; }
+    .route-list { display: grid; gap: 9px; }
+    .stop { cursor: pointer; display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: #fffdf8; transition: .15s ease; }
+    .stop:hover { transform: translateX(3px); border-color: var(--green); }
+    .num { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: white; font-weight: 700; }
+    .stop h3 { margin: 0; font-size: 14px; }
+    .meta { color: var(--coral); font-size: 12px; font-weight: 700; }
+    .focus { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .transfer { margin: 2px 0 2px 44px; padding: 5px 8px; color: var(--muted); font-size: 11px; border-left: 2px dotted var(--gold); }
+    .cost { display: inline-block; margin-top: 4px; color: var(--green); font-weight: 700; }
+    .pass-covered { color: var(--green); }
+    .pass-partial { color: #a56d00; }
+    .pass-pay { color: var(--coral); }
+    .detail-hint { margin-top: 5px; color: var(--green); font-size: 11px; font-weight: 700; }
+    #map { height: 100vh; width: 100%; background: #dbe8df; }
+    .legend { padding: 8px 10px; border-radius: 10px; background: rgba(255,253,247,.94); box-shadow: 0 2px 12px rgba(0,0,0,.15); font-size: 11px; line-height: 1.65; }
+    .swatch { display: inline-block; width: 18px; height: 4px; margin-right: 5px; vertical-align: middle; border-radius: 4px; }
+    .main { background: var(--coral); }
+    .optional { background: var(--gold); }
+    .rail-path { background: #2474b5; }
+    .bus-path { height: 0; border-top: 3px dashed #7553a6; background: transparent; }
+    .ferry-path { height: 0; border-top: 3px dotted #168c88; background: transparent; }
+    .flight-path { height: 0; border-top: 3px dashed #c74f5b; background: transparent; }
+    .duration-label { border: 1px solid rgba(20,35,29,.16); border-radius: 7px; background: rgba(255,253,247,.92); color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.12); font: 700 10px "DM Sans", sans-serif; padding: 2px 5px; }
+    .duration-label::before { display: none; }
+    .leaflet-popup-content-wrapper { border-radius: 12px; }
+    .leaflet-popup-content { font-family: "DM Sans", sans-serif; line-height: 1.45; }
+    .popup-title { font-weight: 700; color: var(--green); font-size: 15px; }
+    .pin { width: 28px; height: 28px; display: grid; place-items: center; border: 2px solid white; border-radius: 50%; color: white; background: var(--green); box-shadow: 0 2px 7px rgba(0,0,0,.3); font: 700 12px "DM Sans", sans-serif; }
+    .drawer-backdrop { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(20,35,29,.42); }
+    .drawer-backdrop.open { display: block; }
+    .drawer { position: absolute; top: 0; right: 0; width: min(520px, 100%); height: 100%; overflow-y: auto; padding: 25px; background: #fffdf8; box-shadow: -8px 0 30px rgba(0,0,0,.22); }
+    .drawer-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .drawer h2 { margin: 0; font: 700 28px/1.15 "Fraunces", serif; }
+    .close { cursor: pointer; border: 0; border-radius: 50%; width: 34px; height: 34px; background: #e8eee9; color: var(--ink); font-size: 20px; }
+    .field { margin: 16px 0; }
+    .field label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: .06em; }
+    textarea, input { width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font: inherit; }
+    textarea { min-height: 130px; resize: vertical; }
+    .add-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 7px; }
+    .btn { cursor: pointer; padding: 9px 12px; border: 0; border-radius: 9px; background: var(--green); color: white; font-weight: 700; }
+    .saved-list { display: grid; gap: 7px; margin-top: 9px; }
+    .saved-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: white; font-size: 13px; }
+    .saved-item a { color: var(--green); font-weight: 700; text-decoration: none; }
+    .delete { cursor: pointer; border: 0; background: transparent; color: var(--coral); font-weight: 700; }
+    .save-state { color: var(--muted); font-size: 11px; }
+    @media (max-width: 780px) {
+      .layout { display: flex; flex-direction: column; height: auto; }
+      .panel { order: 2; overflow: visible; }
+      #map { height: 62vh; position: sticky; top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <aside class="panel">
+      <h1>North to South</h1>
+      <p class="subtitle">Optimized nature-first route · 12 June–12 July 2026</p>
+      <div class="summary">
+        <div class="stat"><b>30</b><span>nights</span></div>
+        <div class="stat"><b>12</b><span>main bases</span></div>
+        <div class="stat"><b>¥100k</b><span>21-day JR Pass</span></div>
+      </div>
+      <p class="note"><b>JR Pass plan:</b> activate on <b>June 15</b> for validity through <b>July 5</b>. Start with Lake Toya → Hakodate, then continue south through Kagoshima. Estimated separately paid transport remains about <b>¥67,000</b> per person.</p>
+      <div class="sync-actions">
+        <a href="https://docs.google.com/document/d/1aPP6_IV92iG-W7Ic6244ZdyUOx2XfvOFLcuG8OH_b44/edit" target="_blank" rel="noopener">Open Google Doc</a>
+        <button id="prepare-sync">Prepare Google Docs Sync</button>
+        <a class="packing-link" href="packing-checklist.html">Open Packing Checklist</a>
+        <div class="sync-message" id="sync-message">Last full connector sync: June 7, 2026</div>
+      </div>
+      <section class="route-list" id="route-list"></section>
+    </aside>
+    <div id="map"></div>
+  </main>
+  <div class="drawer-backdrop" id="detail-backdrop">
+    <section class="drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <div class="drawer-head">
+        <div><h2 id="detail-title"></h2><div class="meta" id="detail-meta"></div></div>
+        <button class="close" id="detail-close" aria-label="Close">×</button>
+      </div>
+      <div class="note" id="detail-focus"></div>
+      <div class="field">
+        <label>Next transfer and pass coverage</label>
+        <div class="saved-item" id="detail-transfer"></div>
+      </div>
+      <div class="field">
+        <label>Starter plan</label>
+        <div class="saved-item" id="detail-plan"></div>
+      </div>
+      <div class="field">
+        <label for="detail-notes">General notes and plans</label>
+        <textarea id="detail-notes" placeholder="Ideas, schedule thoughts, food, booking reminders..."></textarea>
+        <div class="save-state" id="save-state">Saved locally in this browser</div>
+      </div>
+      <div class="field">
+        <label>Tourist places / activities</label>
+        <div class="add-grid">
+          <input id="place-name" placeholder="Place or activity">
+          <input id="place-url" placeholder="Optional link">
+          <button class="btn" id="add-place">Add</button>
+        </div>
+        <div class="saved-list" id="places-list"></div>
+      </div>
+      <div class="field">
+        <label>Accommodation / Airbnb links</label>
+        <div class="add-grid">
+          <input id="stay-name" placeholder="Accommodation name">
+          <input id="stay-url" placeholder="Airbnb, hotel, hostel link">
+          <button class="btn" id="add-stay">Add</button>
+        </div>
+        <div class="saved-list" id="stays-list"></div>
+      </div>
+    </section>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const stops = [
+      {n:1, name:"Sapporo", dates:"Jun 12 → Jun 14", nights:"2 nights", coords:[43.0618,141.3545], focus:"Arrival, one city evening/day, Otaru or local hike", next:"Jun 14 · Train/bus to Noboribetsu, then Lake Toya · full sightseeing day", cost:"Pay ~¥8,200", passClass:"pass-pay"},
+      {n:2, name:"Noboribetsu / Lake Toya", dates:"Jun 14 → Jun 15", nights:"1 night", coords:[42.5657,140.8224], focus:"Hell Valley geothermal hike, onsen, caldera lake, and Toyako overnight", next:"Jun 15 · Bus + Limited Express Hokuto to Hakodate · ~2h15", cost:"JR Pass partly covered · pay bus ~¥400; rail retail ~¥6,250", passClass:"pass-partial"},
+      {n:3, name:"Hakodate", dates:"Jun 15 → Jun 16", nights:"1 night", coords:[41.7687,140.7288], focus:"Walkable harbor, historic district, seafood, mountain night view", next:"Jun 16 · Hakodate Liner + Hokkaido Shinkansen to Aomori · ~2h", cost:"JR Pass covered · retail ~¥8,000", passClass:"pass-covered"},
+      {n:4, name:"Aomori / Oirase", dates:"Jun 16 → Jun 19", nights:"3 nights", coords:[40.8222,140.7474], focus:"Oirase Gorge, Lake Towada, Aomori/Hirosaki", next:"Jun 19 · Resort Shirakami scenic train to Akita · ~5h sightseeing journey", cost:"JR Pass covered · retail ~¥5,500", passClass:"pass-covered"},
+      {n:5, name:"Akita", dates:"Jun 19 → Jun 20", nights:"1 night", coords:[39.7199,140.1025], focus:"Scenic-rail endpoint and relaxed overnight", next:"Jun 20 · Komachi Shinkansen to Tokyo · ~3h50", cost:"JR Pass covered · retail ~¥18,000", passClass:"pass-covered"},
+      {n:6, name:"Tokyo", dates:"Jun 20 → Jun 24", nights:"4 nights", coords:[35.6762,139.6503], focus:"Three city days; Nikko/Fuji only if weather is excellent", next:"Jun 24 · Limited Express Azusa · ~2h40", cost:"JR Pass covered · retail ~¥6,600", passClass:"pass-covered"},
+      {n:7, name:"Matsumoto / Kamikochi", dates:"Jun 24 → Jun 28", nights:"4 nights", coords:[36.2381,137.9720], focus:"Castle, Kamikochi, Alps weather buffer, World Cup mornings", next:"Jun 28 · Cross Alpine Route east-to-west · full 8–10h sightseeing day", cost:"Pay ~¥16,000 · Alpine Route not covered", passClass:"pass-pay"},
+      {n:8, name:"Kanazawa", dates:"Jun 28 → Jun 30", nights:"2 nights", coords:[36.5613,136.6562], focus:"Kenrokuen, old districts, recovery after Alpine Route", next:"Jun 30 · Shinkansen + Thunderbird via Tsuruga · ~2h10", cost:"JR Pass covered · retail ~¥7,700", passClass:"pass-covered"},
+      {n:9, name:"Kyoto / Osaka", dates:"Jun 30 → Jul 3", nights:"3 nights", coords:[35.0116,135.7681], focus:"Two Kyoto days plus one Osaka evening/day", next:"Jul 3 · Hikari/Sakura Shinkansen to Hiroshima · ~2h", cost:"JR Pass covered · retail ~¥11,300", passClass:"pass-covered"},
+      {n:10, name:"Hiroshima / Miyajima", dates:"Jul 3 → Jul 5", nights:"2 nights", coords:[34.3853,132.4553], focus:"One Hiroshima day and one proper Miyajima day", next:"Jul 5 · Sakura Shinkansen to Kagoshima + ferry/flight to Yakushima · most of a day", cost:"Partly covered · pay ~¥13,000 after Kagoshima", passClass:"pass-partial"},
+      {n:11, name:"Yakushima", dates:"Jul 5 → Jul 8", nights:"3 nights", coords:[30.3586,130.5286], focus:"One major hike, one lighter forest/coast day, rain buffer", next:"Jul 8 · Flight/ferry via Kagoshima to Naha · allow ~4–6h", cost:"Pay ~¥29,000 · not JR", passClass:"pass-pay"},
+      {n:12, name:"Okinawa / Naha", dates:"Jul 8 → Jul 12", nights:"4 nights", coords:[26.2124,127.6809], focus:"Naha, Kerama day trip, beach day, departure buffer", next:"Trip ends", cost:""}
+    ];
+
+    const optional = [
+      {name:"Otaru", coords:[43.1907,140.9947], from:0, text:"Easy Sapporo day trip · ~35 min each way"},
+      {name:"Jozankei", coords:[42.9671,141.1667], from:0, text:"Onsen and valley walks · around 1h by direct bus from Sapporo"},
+      {name:"Noboribetsu Hell Valley", coords:[42.4970,141.1440], from:1, text:"Day stop en route · geothermal boardwalks, forest trails, footbath and onsen"},
+      {name:"Onuma Park", coords:[41.9807,140.6694], from:2, text:"Optional rail stopover near Hakodate · trails and lake beside the station"},
+      {name:"Oirase Gorge", coords:[40.5290,140.9705], from:3, text:"Nature day · bus access, allow a full day"},
+      {name:"Nikko", coords:[36.7199,139.6982], from:5, text:"Tokyo day trip · ~2h each way"},
+      {name:"Fuji Five Lakes", coords:[35.5170,138.7518], from:5, text:"Weather-dependent Tokyo side trip · ~2h each way"},
+      {name:"Kamikochi", coords:[36.2472,137.6331], from:6, text:"Alpine hiking · ~2h each way from Matsumoto"},
+      {name:"Kerama Islands", coords:[26.1990,127.3300], from:11, text:"Ferry day trip from Naha · ~35–70 min"}
+    ];
+
+    // Approximate public-transport corridors, intended for trip planning rather than navigation.
+    const travelPaths = [
+      {mode:"train", name:"Sapporo → Noboribetsu → Toya → Hakodate", coords:[[43.0687,141.3508],[42.9791,141.5628],[42.8281,141.6519],[42.6395,141.5964],[42.4520,141.1808],[42.4719,140.8648],[42.5506,140.7636],[42.5125,140.3750],[42.0033,140.6488],[41.7737,140.7264]]},
+      {mode:"bus", name:"Noboribetsu Station ↔ Hell Valley", coords:[[42.4520,141.1808],[42.4970,141.1440],[42.4520,141.1808]]},
+      {mode:"bus", name:"Toya Station ↔ Toyako Onsen", coords:[[42.5506,140.7636],[42.5657,140.8224],[42.5506,140.7636]]},
+      {mode:"train", name:"Hakodate → Aomori", coords:[[41.7737,140.7264],[41.9054,140.6487],[41.6775,140.4340],[41.1456,140.5150],[40.8275,140.7347]]},
+      {mode:"bus", name:"Aomori ↔ Oirase Gorge", coords:[[40.8275,140.7347],[40.6830,140.9100],[40.5290,140.9705],[40.4630,140.8770]]},
+      {mode:"train", name:"Aomori → Akita via Resort Shirakami", coords:[[40.8275,140.7347],[40.6031,140.4639],[40.5825,140.4120],[40.2100,140.0200],[39.8050,140.0070],[39.7167,140.1297]]},
+      {mode:"train", name:"Akita → Tokyo", coords:[[39.7167,140.1297],[39.7000,140.7200],[39.3000,141.1100],[38.2600,140.8800],[37.9100,140.1900],[36.3700,139.0700],[35.6812,139.7671]]},
+      {mode:"train", name:"Tokyo → Matsumoto", coords:[[35.6812,139.7671],[35.6900,139.7000],[35.6550,139.3400],[35.6100,138.9400],[35.6600,138.5700],[36.2300,137.9650]]},
+      {mode:"bus", name:"Matsumoto ↔ Kamikochi", coords:[[36.2300,137.9650],[36.1900,137.8200],[36.2472,137.6331],[36.2300,137.9650]]},
+      {mode:"bus", name:"Alpine Route: Matsumoto → Kanazawa", coords:[[36.2300,137.9650],[36.5600,137.7200],[36.5850,137.4500],[36.6900,137.2100],[36.5613,136.6562]]},
+      {mode:"train", name:"Kanazawa → Kyoto", coords:[[36.5781,136.6483],[36.0630,136.2230],[35.6450,136.0750],[35.3140,135.9690],[34.9855,135.7586]]},
+      {mode:"train", name:"Kyoto → Hiroshima", coords:[[34.9855,135.7586],[34.7330,135.5000],[34.6660,135.4380],[34.3970,133.5900],[34.3970,132.4750]]},
+      {mode:"train", name:"Hiroshima ↔ Miyajimaguchi", coords:[[34.3970,132.4750],[34.3500,132.4000],[34.3124,132.3028],[34.3970,132.4750]]},
+      {mode:"ferry", name:"Miyajimaguchi ↔ Itsukushima (Miyajima)", coords:[[34.3124,132.3028],[34.2994,132.3198],[34.3124,132.3028]]},
+      {mode:"train", name:"Hiroshima → Kagoshima", coords:[[34.3970,132.4750],[33.5900,130.4200],[32.7900,130.6900],[31.5840,130.5420]]},
+      {mode:"ferry", name:"Kagoshima → Yakushima", coords:[[31.5840,130.5650],[30.9300,130.5500],[30.4230,130.5720]]},
+      {mode:"flight", name:"Yakushima → Kagoshima → Naha", coords:[[30.3856,130.6590],[31.8034,130.7194],[29.7000,129.1000],[26.1958,127.6459]]},
+      {mode:"ferry", name:"Naha ↔ Kerama Islands", coords:[[26.2180,127.6720],[26.1990,127.3300],[26.2180,127.6720]]}
+    ];
+    const hokkaidoRailPath = [];
+    const hokkaidoBusPaths = [];
+    const travelDurations = [
+      "~5h rail total", "~15m each way", "~20m each way", "~2h", "~2h each way",
+      "~5h", "~3h50", "~2h40", "~2h each way", "~8–10h", "~2h10", "~2h",
+      "~30m each way", "~10m each way", "~3h", "~2h fast ferry",
+      "~4–6h with connection", "~35–70m each way"
+    ];
+
+    const draftPlans = [
+      "Arrival evening: food and Susukino. Full day: choose Otaru or a Sapporo city/local-hike day.",
+      "Leave Sapporo early, explore Noboribetsu Hell Valley and forest trails for 3–4 hours, then continue by train and bus to Toyako Onsen. Walk the lakeside and stay overnight at Lake Toya.",
+      "Arrive afternoon, explore Motomachi and harbor, then Mount Hakodate at sunset. Morning market before departure.",
+      "Use one full day for Oirase Gorge and Lake Towada. Split the remaining time between Aomori and Hirosaki.",
+      "Arrive aboard Resort Shirakami, enjoy a relaxed dinner and short city walk, then leave for Tokyo next morning.",
+      "Three city days with neighborhoods grouped geographically. Keep Nikko or Fuji Five Lakes optional and weather-dependent.",
+      "Matsumoto city/castle, one full Kamikochi day, one additional Alps or rest day, then cross the Alpine Route.",
+      "Kenrokuen and castle area, Higashi Chaya district, seafood market, and recovery time after the Alpine Route.",
+      "Base in Kyoto. Use two days for Kyoto areas and one day/evening for Osaka rather than changing hotels.",
+      "One Hiroshima city/history day and one Miyajima day including Mount Misen if weather allows.",
+      "Arrival/logistics day, one major hike, and one lighter forest/coast day. Keep plans flexible for rain.",
+      "Naha and food, Kerama Islands day trip, beach/rest day, and a final buffer before departure."
+    ];
+
+    const map = L.map("map", {zoomControl:true}).setView([35.8, 137.5], 5);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      maxZoom: 20,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(map);
+
+    const pin = n => L.divIcon({className:"", html:`<div class="pin">${n}</div>`, iconSize:[28,28], iconAnchor:[14,14]});
+    const markers = [];
+    stops.forEach((s, i) => {
+      const marker = L.marker(s.coords, {icon:pin(s.n)}).addTo(map)
+        .bindPopup(`<div class="popup-title">${s.n}. ${s.name}</div><b>${s.dates} · ${s.nights}</b><br>${s.focus}<hr><b>Next:</b> ${s.next}`);
+      markers.push(marker);
+    });
+    let mainRouteLine = L.polyline(stops.map(s => s.coords), {color:"#e46c4c", weight:4, opacity:.85}).addTo(map);
+
+    L.polyline(hokkaidoRailPath, {color:"#2474b5", weight:5, opacity:.9})
+      .addTo(map)
+      .bindPopup('<div class="popup-title">Trial: Hokkaido rail path</div>Sapporo → Noboribetsu Station → Toya Station → Hakodate<br><b>Solid blue:</b> train');
+    hokkaidoBusPaths.forEach(path => {
+      L.polyline(path, {color:"#2474b5", weight:4, dashArray:"7 8", opacity:.9})
+        .addTo(map)
+        .bindPopup('<div class="popup-title">Local bus connection</div><b>Dashed blue:</b> bus between station and sightseeing/overnight area');
+    });
+    [
+      {name:"Sapporo Station", coords:[43.0687,141.3508]},
+      {name:"Noboribetsu Station", coords:[42.4520,141.1808]},
+      {name:"Toya Station", coords:[42.5506,140.7636]},
+      {name:"Hakodate Station", coords:[41.7737,140.7264]}
+    ].forEach(station => {
+      L.circleMarker(station.coords, {radius:4, color:"#fff", weight:2, fillColor:"#2474b5", fillOpacity:1})
+        .addTo(map).bindTooltip(station.name);
+    });
+
+    const modeStyles = {
+      train:{color:"#2474b5", weight:4, opacity:.88},
+      bus:{color:"#7553a6", weight:3, dashArray:"7 7", opacity:.88},
+      ferry:{color:"#168c88", weight:4, dashArray:"2 8", opacity:.92},
+      flight:{color:"#c74f5b", weight:3, dashArray:"12 10", opacity:.85}
+    };
+    const modeLabels = {train:"Train", bus:"Bus / ground connection", ferry:"Ferry", flight:"Flight"};
+    travelPaths.forEach((path, index) => {
+      L.polyline(path.coords, modeStyles[path.mode])
+        .addTo(map)
+        .bindPopup(`<div class="popup-title">${path.name}</div><b>${modeLabels[path.mode]} · ${travelDurations[index]}</b><br>Approximate planning path; confirm exact service when booking.`);
+      const midpoint = path.coords[Math.floor(path.coords.length / 2)];
+      L.tooltip({permanent:true, direction:"center", className:"duration-label", opacity:.95})
+        .setLatLng(midpoint).setContent(travelDurations[index]).addTo(map);
+    });
+
+    optional.forEach(o => {
+      L.circleMarker(o.coords, {radius:5, color:"#fff", weight:2, fillColor:"#d9a441", fillOpacity:1})
+        .addTo(map).bindPopup(`<div class="popup-title">${o.name}</div>${o.text}`);
+      L.polyline([stops[o.from].coords, o.coords], {color:"#d9a441", weight:2, dashArray:"5 7", opacity:.8}).addTo(map);
+    });
+
+    const list = document.getElementById("route-list");
+    stops.forEach((s, i) => {
+      list.insertAdjacentHTML("beforeend", `
+        <article class="stop" data-index="${i}">
+          <div class="num">${s.n}</div>
+          <div><h3>${s.name}</h3><div class="meta">${s.dates} · ${s.nights}</div><div class="focus">${s.focus}</div><div class="detail-hint">Open details and notes</div></div>
+        </article>
+        ${i < stops.length - 1 ? `<div class="transfer">↓ ${s.next}<br><span class="cost ${s.passClass || ""}">${s.cost}</span></div>` : ""}
+      `);
+    });
+
+    const storageKey = "japan2026-stop-planner-v1";
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    const backdrop = document.getElementById("detail-backdrop");
+    const notes = document.getElementById("detail-notes");
+    let activeIndex = 0;
+
+    const escapeHtml = value => String(value || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+    const validUrl = value => /^https?:\/\//i.test(value || "") ? value : "";
+    const stopData = index => {
+      const key = stops[index].name;
+      return saved[key] || (saved[key] = {notes:"", places:[], stays:[]});
+    };
+    const persist = () => {
+      localStorage.setItem(storageKey, JSON.stringify(saved));
+      document.getElementById("save-state").textContent = "Saved locally in this browser";
+    };
+    const renderItems = (type, targetId) => {
+      const items = stopData(activeIndex)[type];
+      document.getElementById(targetId).innerHTML = items.length ? items.map((item, index) => `
+        <div class="saved-item">
+          <div>${validUrl(item.url) ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>` : escapeHtml(item.name)}</div>
+          <button class="delete" data-type="${type}" data-item="${index}">Remove</button>
+        </div>`).join("") : `<div class="save-state">Nothing added yet.</div>`;
+    };
+    const renderDetails = () => {
+      const s = stops[activeIndex];
+      const data = stopData(activeIndex);
+      document.getElementById("detail-title").textContent = `${s.n}. ${s.name}`;
+      document.getElementById("detail-meta").textContent = `${s.dates} · ${s.nights}`;
+      document.getElementById("detail-focus").textContent = s.focus;
+      document.getElementById("detail-transfer").textContent = s.next === "Trip ends" ? "Trip ends" : `${s.next}. ${s.cost}`;
+      document.getElementById("detail-plan").textContent = draftPlans[activeIndex];
+      notes.value = data.notes || "";
+      renderItems("places", "places-list");
+      renderItems("stays", "stays-list");
+    };
+    const openDetails = index => {
+      activeIndex = index;
+      renderDetails();
+      backdrop.classList.add("open");
+      map.flyTo(stops[index].coords, 8, {duration:1});
+    };
+    const closeDetails = () => backdrop.classList.remove("open");
+
+    document.querySelectorAll(".stop").forEach(el => el.addEventListener("click", () => openDetails(Number(el.dataset.index))));
+    markers.forEach((marker, index) => marker.on("click", () => openDetails(index)));
+    document.getElementById("detail-close").addEventListener("click", closeDetails);
+    backdrop.addEventListener("click", event => { if (event.target === backdrop) closeDetails(); });
+    notes.addEventListener("input", () => {
+      stopData(activeIndex).notes = notes.value;
+      document.getElementById("save-state").textContent = "Saving...";
+      persist();
+    });
+
+    const addItem = (type, nameId, urlId, targetId) => {
+      const nameInput = document.getElementById(nameId);
+      const urlInput = document.getElementById(urlId);
+      const name = nameInput.value.trim();
+      if (!name) return;
+      stopData(activeIndex)[type].push({name, url:urlInput.value.trim()});
+      nameInput.value = "";
+      urlInput.value = "";
+      persist();
+      renderItems(type, targetId);
+    };
+    document.getElementById("add-place").addEventListener("click", () => addItem("places", "place-name", "place-url", "places-list"));
+    document.getElementById("add-stay").addEventListener("click", () => addItem("stays", "stay-name", "stay-url", "stays-list"));
+    backdrop.addEventListener("click", event => {
+      const button = event.target.closest(".delete");
+      if (!button) return;
+      const type = button.dataset.type;
+      stopData(activeIndex)[type].splice(Number(button.dataset.item), 1);
+      persist();
+      renderItems(type, type === "places" ? "places-list" : "stays-list");
+    });
+
+    const buildSyncText = () => {
+      const lines = [
+        "Japan 2026 Master Itinerary - Live Planner Export",
+        "Travel dates: June 12 to July 12, 2026",
+        "No rental cars. JR Pass planned for June 15 to July 5.",
+        ""
+      ];
+      stops.forEach((s, index) => {
+        const data = stopData(index);
+        lines.push(`${s.n}. ${s.name}`);
+        lines.push(`${s.dates} | ${s.nights}`);
+        lines.push(`Focus: ${s.focus}`);
+        lines.push(`Starter plan: ${draftPlans[index]}`);
+        lines.push(`Next transfer: ${s.next}. ${s.cost || ""}`);
+        lines.push(`Notes: ${data.notes || "None added"}`);
+        lines.push(`Tourist places: ${data.places.length ? data.places.map(x => `${x.name}${x.url ? ` (${x.url})` : ""}`).join("; ") : "None added"}`);
+        lines.push(`Accommodation / Airbnb: ${data.stays.length ? data.stays.map(x => `${x.name}${x.url ? ` (${x.url})` : ""}`).join("; ") : "None added"}`);
+        lines.push("");
+      });
+      return lines.join("\n");
+    };
+    document.getElementById("prepare-sync").addEventListener("click", async () => {
+      const text = buildSyncText();
+      try {
+        await navigator.clipboard.writeText(text);
+        document.getElementById("sync-message").textContent = "Current live plan copied. Ask Codex to sync it to the Google Doc.";
+      } catch {
+        const blob = new Blob([text], {type:"text/plain"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "japan-2026-live-plan.txt";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("sync-message").textContent = "Current live plan downloaded for Google Docs sync.";
+      }
+    });
+
+    const legend = L.control({position:"bottomright"});
+    legend.onAdd = () => {
+      const d = L.DomUtil.create("div", "legend");
+      d.innerHTML = '<b>Travel paths</b><br><span class="swatch rail-path"></span>Train<br><span class="swatch bus-path"></span>Bus / ground connection<br><span class="swatch ferry-path"></span>Ferry<br><span class="swatch flight-path"></span>Flight<br><span class="swatch main"></span>Route overview<br><span class="swatch optional"></span>Optional side trip';
+      return d;
+    };
+    legend.addTo(map);
+  </script>
+</body>
+</html>

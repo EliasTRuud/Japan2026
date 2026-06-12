@@ -1,0 +1,7 @@
+# Local editor and OS files
+.DS_Store
+Thumbs.db
+
+# Local server/runtime files
+*.log
+__pycache__/
