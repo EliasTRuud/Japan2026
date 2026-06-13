@@ -21,6 +21,8 @@ Planner notes are saved in the browser's local storage and are not automatically
 - `japan-route-map.html` - interactive route map and trip planner
 - `packing-checklist.html` - interactive packing checklist
 - `ITINERARY.md` - portable snapshot of the master itinerary
+- `SCENIC-TRAIN-OPTIONS.md` - optional Furano/Biei loop and scenic-train recommendation
+- `GPT-HANDOFF.md` - concise context for continuing planning in a new GPT conversation
 
 ## Live Master Document
 
